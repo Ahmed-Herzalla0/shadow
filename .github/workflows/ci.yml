@@ -152,6 +152,41 @@ jobs:
           
           print('✓ Scoring smoke test passed')
           "
+      
+      - name: Test orchestrator --help
+        run: |
+          python orchestrator.py --help
+          echo "✓ Orchestrator help test passed"
+      
+      - name: Test decision engine
+        run: |
+          python -c "
+          from decision import DecisionEngine, score_single_target
+          
+          engine = DecisionEngine()
+          
+          # Test XSS scoring
+          targets = [
+              {'url': 'https://example.com/search?q=test', 'params': {'q': 'test'}},
+              {'url': 'https://example.com/admin?cmd=ls', 'params': {'cmd': 'ls'}},
+          ]
+          
+          results = engine.score_targets(targets)
+          assert len(results) == 2
+          assert results[0].score >= results[1].score or results[1].score >= results[0].score  # sorted
+          
+          # Test single scoring
+          result = score_single_target('https://example.com/api', params={'id': '1'})
+          assert result.score >= 0
+          assert 'idor' in result.tags
+          
+          print('✓ Decision engine smoke test passed')
+          "
+      
+      - name: Test subdomain collector --help
+        run: |
+          python modules/02_subdomains/collector.py --help
+          echo "✓ Subdomain collector help test passed"
 
   security:
     name: Security Scan

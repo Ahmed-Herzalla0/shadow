@@ -1,0 +1,148 @@
+{
+  "generated_at": "2026-01-31T12:00:00.000000",
+  "target": "example.com",
+  "scope": "xss",
+  "total_scored": 1247,
+  "targets": [
+    {
+      "url": "https://api.example.com/v1/search?q=test&redirect=http://evil.com",
+      "domain": "api.example.com",
+      "path": "/v1/search",
+      "params": {
+        "q": "test",
+        "redirect": "http://evil.com"
+      },
+      "score": 18,
+      "priority": "critical",
+      "action": "ssrf-test",
+      "reasons": [
+        "+4: XSS param (q)",
+        "+12: SSRF param (redirect)",
+        "+3: API path pattern",
+        "+2: Multiple vuln indicators (xss, ssrf)"
+      ],
+      "tags": ["xss", "ssrf", "api", "multi-vuln"],
+      "source": "katana"
+    },
+    {
+      "url": "https://admin.example.com/debug/console?cmd=whoami",
+      "domain": "admin.example.com",
+      "path": "/debug/console",
+      "params": {
+        "cmd": "whoami"
+      },
+      "score": 28,
+      "priority": "critical",
+      "action": "rce-verify",
+      "reasons": [
+        "+25: RCE param (cmd)",
+        "+5: DEBUG path pattern",
+        "+4: ADMIN subdomain bonus",
+        "+3: Admin/debug path with parameters"
+      ],
+      "tags": ["rce", "debug", "admin", "high-value"],
+      "source": "katana"
+    },
+    {
+      "url": "https://example.com/graphql",
+      "domain": "example.com",
+      "path": "/graphql",
+      "params": {
+        "query": "{ users { id email } }"
+      },
+      "score": 12,
+      "priority": "high",
+      "action": "graphql-introspect",
+      "reasons": [
+        "+4: GRAPHQL path pattern",
+        "+4: XSS param (query)",
+        "+2: GraphQL introspection candidate"
+      ],
+      "tags": ["graphql", "xss"],
+      "source": "content-discovery"
+    },
+    {
+      "url": "https://api.example.com/v2/users?id=12345",
+      "domain": "api.example.com",
+      "path": "/v2/users",
+      "params": {
+        "id": "12345"
+      },
+      "score": 11,
+      "priority": "high",
+      "action": "idor-test",
+      "reasons": [
+        "+8: IDOR param (id)",
+        "+3: API path pattern",
+        "+2: API endpoint with IDOR candidate"
+      ],
+      "tags": ["idor", "api", "api-idor"],
+      "source": "param-discovery"
+    },
+    {
+      "url": "https://example.com/api/v1/upload?file=report.pdf",
+      "domain": "example.com",
+      "path": "/api/v1/upload",
+      "params": {
+        "file": "report.pdf"
+      },
+      "score": 17,
+      "priority": "critical",
+      "action": "lfi-test",
+      "reasons": [
+        "+14: LFI param (file)",
+        "+3: API path pattern",
+        "+3: UPLOAD path pattern"
+      ],
+      "tags": ["lfi", "api", "upload"],
+      "source": "katana"
+    },
+    {
+      "url": "https://staging.example.com/actuator/health",
+      "domain": "staging.example.com",
+      "path": "/actuator/health",
+      "params": {},
+      "score": 9,
+      "priority": "high",
+      "action": "info-leak-verify",
+      "reasons": [
+        "+5: ACTUATOR path pattern",
+        "+4: INTERNAL subdomain pattern"
+      ],
+      "tags": ["exposure", "internal"],
+      "source": "subdomain-discovery"
+    },
+    {
+      "url": "https://example.com/login?redirect=/dashboard",
+      "domain": "example.com",
+      "path": "/login",
+      "params": {
+        "redirect": "/dashboard"
+      },
+      "score": 8,
+      "priority": "medium",
+      "action": "ssrf-test",
+      "reasons": [
+        "+6: SSRF param (redirect)",
+        "+2: AUTH path pattern"
+      ],
+      "tags": ["ssrf", "auth"],
+      "source": "content-discovery"
+    },
+    {
+      "url": "https://cdn.example.com/static/app.js",
+      "domain": "cdn.example.com",
+      "path": "/static/app.js",
+      "params": {},
+      "score": 0,
+      "priority": "noise",
+      "action": "ignore",
+      "reasons": [
+        "-5: Noise pattern matched (static file)",
+        "-3: Noise pattern matched (static directory)"
+      ],
+      "tags": ["noise"],
+      "source": "js-discovery"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-# 🦇 SHADOW v2.3 - SQLite-Powered Bug Bounty Recon
+# 🦇 SHADOW v3.0 - Decision-Driven Recon Orchestrator
 
 ```
 ███████╗██╗  ██╗ █████╗ ██████╗  ██████╗ ██╗    ██╗
@@ -7,10 +7,10 @@
 ╚════██║██╔══██║██╔══██║██║  ██║██║   ██║██║███╗██║
 ███████║██║  ██║██║  ██║██████╔╝╚██████╔╝╚███╔███╔╝
 ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝  ╚═════╝  ╚══╝╚══╝
-       SQLite-Powered Bug Bounty Recon v2.3
+       Decision-Driven Recon Orchestrator v3.0
 ```
 
-**أداة Recon تخزن كل شي في SQLite. لا files منفصلة. Decision-ready outputs.**
+**Automated recon with scored targets, JSONL pipelines, and actionable recommendations.**
 
 [![CI](https://github.com/Ahmed-Herzalla0/shadow/actions/workflows/ci.yml/badge.svg)](https://github.com/Ahmed-Herzalla0/shadow/actions/workflows/ci.yml)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -59,11 +59,28 @@
 
 ## 🚀 Quick Start
 
-```bash
-# Install dependencies
-pip install -e .
-./install_tools.sh  # Install external tools
+### Orchestrator (New in v3.0)
 
+```bash
+# Install
+pip install -e .
+
+# XSS-focused recon (default scope)
+python orchestrator.py target.com --output outdir --scope xss
+
+# Resume interrupted scan
+python orchestrator.py target.com --output outdir --resume
+
+# Run destructive modules (nuclei exploit templates)
+python orchestrator.py target.com --allow-destructive --confirm-legal
+
+# Debug mode with verbose logging
+python orchestrator.py target.com --debug
+```
+
+### Legacy CLI
+
+```bash
 # Full recon scan
 ./shadow hunt example.com
 
@@ -222,24 +239,58 @@ WHERE e.params LIKE '%file%'
 
 ```
 shadow/
-├── shadow                  # CLI entry point (Python)
-├── pyproject.toml          # Python packaging
+├── orchestrator.py         # Main orchestrator CLI (v3.0)
+├── shadow                   # Legacy CLI entry point
+├── pyproject.toml           # Python packaging
 ├── core/
-│   ├── db.py              # SQLite database layer
-│   ├── scorer.py          # Scoring rules & heuristics
-│   └── collectors.py      # Tool wrappers
+│   ├── db.py               # SQLite database layer
+│   ├── scorer.py           # Scoring rules & heuristics
+│   └── collectors.py       # Tool wrappers
+├── decision/
+│   └── decision.py         # Decision engine with tunable weights
+├── schemas/
+│   └── target.py           # Pydantic output schemas
+├── modules/
+│   └── 02_subdomains/
+│       └── collector.py    # Canonical module example
 ├── utils/
-│   ├── __init__.py        # Logging utilities
-│   ├── state.py           # State management & resume
-│   ├── security.py        # Input validation
-│   └── reports.py         # Report generation
+│   ├── __init__.py         # Logging utilities (legacy)
+│   ├── logging.py          # Structured JSON logging
+│   ├── state.py            # State management & resume
+│   ├── security.py         # Input validation
+│   └── reports.py          # Report generation
 ├── tests/
-│   ├── test_decision.py   # Scoring tests
-│   ├── test_db.py         # Database tests
-│   └── test_cli.py        # CLI tests
-├── .github/workflows/     # CI/CD
+│   ├── test_decision.py    # Scoring tests
+│   ├── test_db.py          # Database tests
+│   ├── test_cli.py         # CLI tests
+│   └── test_module_smoke.py # Module smoke tests
+├── reports/
+│   └── targets_ranked_sample.json  # Sample output
+├── .github/workflows/      # CI/CD
 └── wordlists/
 ```
+
+---
+
+## 🎯 Scopes
+
+| Scope | Description | Modules |
+|-------|-------------|---------|
+| `xss` | XSS-focused endpoint discovery (default) | subdomains, dns, http, content, js, params, vuln_xss |
+| `api` | API attack surface mapping | subdomains, http |
+| `js` | JavaScript-heavy endpoint discovery | subdomains, http, content, js |
+| `full` | Complete reconnaissance | All modules |
+
+---
+
+## 🛡️ Safety Flags
+
+| Flag | Purpose |
+|------|---------|
+| `--allow-destructive` | Enable modules that perform invasive actions (nuclei exploit templates, active probing) |
+| `--confirm-legal` | Confirm legal authorization to scan the target |
+
+**Both flags are required for destructive modules.** This ensures you explicitly acknowledge the risks.
 
 ---
 
@@ -293,22 +344,43 @@ ruff check core/ tests/
 
 ```json
 {
-  "generated_at": "2026-01-31T10:00:00",
-  "count": 50,
+  "generated_at": "2026-01-31T12:00:00.000000",
+  "target": "example.com",
+  "scope": "xss",
+  "total_scored": 1247,
   "targets": [
     {
-      "domain": "api.example.com",
-      "url": "https://api.example.com/admin/users?id=1",
-      "score": 12,
+      "url": "https://admin.example.com/debug/console?cmd=whoami",
+      "domain": "admin.example.com",
+      "path": "/debug/console",
+      "params": {"cmd": "whoami"},
+      "score": 28,
       "priority": "critical",
-      "technology": "PHP, Laravel",
-      "params": {"id": "1"},
-      "tags": ["admin", "idor", "api"],
-      "recommended_action": "idor-test",
-      "findings": []
+      "action": "rce-verify",
+      "reasons": [
+        "+25: RCE param (cmd)",
+        "+5: DEBUG path pattern",
+        "+4: ADMIN subdomain bonus"
+      ],
+      "tags": ["rce", "debug", "admin", "high-value"],
+      "source": "katana"
     }
   ]
 }
+```
+
+### Output Directory Structure
+
+```
+output/example.com/
+├── raw/                    # Raw JSONL from each module
+│   ├── subdomains.jsonl
+│   ├── http.jsonl
+│   └── content.jsonl
+├── data/                   # Normalized data
+├── reports/                # Decision-ready outputs
+│   └── targets_ranked.json
+└── state.json              # Resume state
 ```
 
 ---
