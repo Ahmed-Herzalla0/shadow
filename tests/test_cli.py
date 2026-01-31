@@ -51,7 +51,7 @@ class TestCLISmoke:
         )
 
         assert result.returncode == 0
-        assert "domain" in result.stdout.lower()
+        assert "target" in result.stdout.lower()
 
     def test_cli_top_help(self):
         """Test top subcommand help"""
@@ -63,7 +63,7 @@ class TestCLISmoke:
         )
 
         assert result.returncode == 0
-        assert "limit" in result.stdout.lower() or "-n" in result.stdout
+        assert "limit" in result.stdout.lower() or "-l" in result.stdout
 
     def test_cli_export_help(self):
         """Test export subcommand help"""
@@ -75,7 +75,7 @@ class TestCLISmoke:
         )
 
         assert result.returncode == 0
-        assert "score" in result.stdout.lower() or "-s" in result.stdout
+        assert "score" in result.stdout.lower() or "-m" in result.stdout
 
     def test_cli_stats_help(self):
         """Test stats subcommand help"""
@@ -88,18 +88,6 @@ class TestCLISmoke:
 
         assert result.returncode == 0
 
-    def test_cli_query_help(self):
-        """Test query subcommand help"""
-        result = subprocess.run(
-            [sys.executable, str(SHADOW_CLI), "query", "--help"],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-
-        assert result.returncode == 0
-        assert "sql" in result.stdout.lower()
-
     def test_cli_no_args(self):
         """Test CLI with no arguments shows help"""
         result = subprocess.run(
@@ -109,12 +97,12 @@ class TestCLISmoke:
             timeout=10
         )
 
-        # Should exit with code 1 and show help
-        assert result.returncode == 1
-        assert "usage" in result.stdout.lower() or "usage" in result.stderr.lower()
+        # Should exit with code 0 and show help
+        assert result.returncode == 0
+        assert "usage" in result.stdout.lower() or "SHADOW" in result.stdout
 
-    def test_cli_top_no_db(self, tmp_path):
-        """Test top command when database doesn't exist"""
+    def test_cli_top_no_scan(self, tmp_path):
+        """Test top command when no scan exists"""
         result = subprocess.run(
             [sys.executable, str(SHADOW_CLI), "top", "nonexistent.com",
              "-o", str(tmp_path / "output")],
@@ -125,23 +113,109 @@ class TestCLISmoke:
 
         # Should fail gracefully
         assert result.returncode == 1
-        assert "not found" in result.stdout.lower() or "not found" in result.stderr.lower()
+        assert "not found" in result.stdout.lower() or "No ranked" in result.stdout
 
 
-class TestCLIIntegration:
-    """Integration tests with actual database"""
+class TestCLIVersion:
+    """Version and metadata tests"""
 
-    def test_cli_stats_with_db(self, tmp_path, populated_db):
-        """Test stats command with populated database"""
-        # Move populated_db to expected location
-        import shutil
+    def test_cli_version(self):
+        """Test --version flag"""
+        result = subprocess.run(
+            [sys.executable, str(SHADOW_CLI), "--version"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+        assert result.returncode == 0
+        assert "3.0" in result.stdout or "SHADOW" in result.stdout
+
+
+class TestCLIWithRankedTargets:
+    """Integration tests with ranked target files"""
+
+    def test_cli_top_with_ranked_file(self, tmp_path):
+        """Test top command with ranked targets file"""
+        import json
+        
         output_dir = tmp_path / "output" / "example.com"
         output_dir.mkdir(parents=True)
-        db_dest = output_dir / "shadow.db"
+        
+        # Create mock ranked targets file
+        ranked_file = output_dir / "targets_ranked.json"
+        ranked_data = {
+            "metadata": {"scope": "xss", "scan_time": "10s"},
+            "targets": [
+                {"url": "https://example.com/admin", "score": 15, "priority": "critical",
+                 "action": "Manual test", "reasons": ["+4: admin path"], "tags": ["admin"]},
+                {"url": "https://example.com/api", "score": 5, "priority": "medium",
+                 "action": "Automated scan", "reasons": ["+3: api path"], "tags": ["api"]},
+            ]
+        }
+        with open(ranked_file, "w") as f:
+            json.dump(ranked_data, f)
 
-        # Copy database - close first to flush
-        populated_db.conn.commit()
-        shutil.copy(populated_db.db_path, db_dest)
+        result = subprocess.run(
+            [sys.executable, str(SHADOW_CLI), "top", "example.com",
+             "-o", str(output_dir), "-l", "5"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+        assert result.returncode == 0, f"Failed: {result.stdout} {result.stderr}"
+        assert "CRITICAL" in result.stdout
+        assert "example.com/admin" in result.stdout
+
+    def test_cli_export_urls(self, tmp_path):
+        """Test export command outputs URLs"""
+        import json
+        
+        output_dir = tmp_path / "output" / "example.com"
+        output_dir.mkdir(parents=True)
+        
+        ranked_file = output_dir / "targets_ranked.json"
+        ranked_data = {
+            "metadata": {"scope": "xss"},
+            "targets": [
+                {"url": "https://example.com/admin?id=1", "score": 10, "priority": "high",
+                 "action": "Test", "reasons": [], "tags": []},
+            ]
+        }
+        with open(ranked_file, "w") as f:
+            json.dump(ranked_data, f)
+
+        result = subprocess.run(
+            [sys.executable, str(SHADOW_CLI), "export", "example.com",
+             "-o", str(output_dir), "-m", "5"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+        assert result.returncode == 0, f"Failed: {result.stdout} {result.stderr}"
+        assert "https://example.com/admin?id=1" in result.stdout
+
+    def test_cli_stats(self, tmp_path):
+        """Test stats command"""
+        import json
+        
+        output_dir = tmp_path / "output" / "example.com"
+        output_dir.mkdir(parents=True)
+        
+        ranked_file = output_dir / "targets_ranked.json"
+        ranked_data = {
+            "metadata": {"scope": "xss", "scan_time": "10s"},
+            "targets": [
+                {"url": "https://example.com/admin", "score": 15, "priority": "critical",
+                 "action": "Test", "reasons": [], "tags": ["admin", "idor"]},
+                {"url": "https://example.com/api", "score": 5, "priority": "medium",
+                 "action": "Test", "reasons": [], "tags": ["api"]},
+            ]
+        }
+        with open(ranked_file, "w") as f:
+            json.dump(ranked_data, f)
 
         result = subprocess.run(
             [sys.executable, str(SHADOW_CLI), "stats", "example.com",
@@ -152,106 +226,34 @@ class TestCLIIntegration:
         )
 
         assert result.returncode == 0, f"Failed: {result.stdout} {result.stderr}"
-        assert "Assets" in result.stdout or "assets" in result.stdout.lower()
-
-    def test_cli_top_with_db(self, tmp_path, populated_db):
-        """Test top command with populated database"""
-        import shutil
-        output_dir = tmp_path / "output" / "example.com"
-        output_dir.mkdir(parents=True)
-        db_dest = output_dir / "shadow.db"
-
-        populated_db.conn.commit()
-        shutil.copy(populated_db.db_path, db_dest)
-
-        result = subprocess.run(
-            [sys.executable, str(SHADOW_CLI), "top", "example.com",
-             "-o", str(output_dir), "-n", "5"],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-
-        assert result.returncode == 0, f"Failed: {result.stdout} {result.stderr}"
-        assert "TOP" in result.stdout or "Score" in result.stdout
-
-    def test_cli_export_with_db(self, tmp_path, populated_db):
-        """Test export command with populated database"""
-        import shutil
-        output_dir = tmp_path / "output" / "example.com"
-        output_dir.mkdir(parents=True)
-        db_dest = output_dir / "shadow.db"
-
-        populated_db.conn.commit()
-        shutil.copy(populated_db.db_path, db_dest)
-
-        result = subprocess.run(
-            [sys.executable, str(SHADOW_CLI), "export", "example.com",
-             "-o", str(output_dir)],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-
-        assert result.returncode == 0, f"Failed: {result.stdout} {result.stderr}"
-        # Should output URLs
-        assert "http" in result.stdout
-
-    def test_cli_query_with_db(self, tmp_path, populated_db):
-        """Test query command with populated database"""
-        import shutil
-        output_dir = tmp_path / "output" / "example.com"
-        output_dir.mkdir(parents=True)
-        db_dest = output_dir / "shadow.db"
-
-        populated_db.conn.commit()
-        shutil.copy(populated_db.db_path, db_dest)
-
-        result = subprocess.run(
-            [sys.executable, str(SHADOW_CLI), "query", "example.com",
-             "SELECT COUNT(*) as cnt FROM endpoints",
-             "-o", str(output_dir)],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-
-        assert result.returncode == 0, f"Failed: {result.stdout} {result.stderr}"
-        assert "cnt" in result.stdout
+        assert "Total targets: 2" in result.stdout
+        assert "critical" in result.stdout.lower()
 
 
-class TestCollectorSmoke:
-    """Smoke tests for collectors (no external tools required)"""
+class TestOrchestratorSmoke:
+    """Smoke tests for the new orchestrator"""
 
-    def test_import_collectors(self):
-        """Test that collectors can be imported"""
-        from core.collectors import (
-            BaseCollector,
-            Orchestrator,
-        )
+    def test_import_orchestrator(self):
+        """Test that orchestrator can be imported"""
+        from orchestrator import Orchestrator, MODULES, VERSION
 
-        assert BaseCollector is not None
         assert Orchestrator is not None
+        assert isinstance(MODULES, dict)
+        assert VERSION == "3.0.0"
 
-    def test_orchestrator_init(self, tmp_path):
-        """Test Orchestrator initialization"""
-        from core.collectors import Orchestrator
+    def test_modules_have_enabled_flag(self):
+        """Test that all modules have enabled flag"""
+        from orchestrator import MODULES
 
-        db_path = str(tmp_path / "test.db")
-        orch = Orchestrator(db_path)
+        for name, config in MODULES.items():
+            assert "enabled" in config, f"Module {name} missing 'enabled' flag"
+            assert "script" in config, f"Module {name} missing 'script' field"
+            assert "scopes" in config, f"Module {name} missing 'scopes' field"
 
-        assert orch.db is not None
-        assert orch.subdomains is not None
-        assert orch.http is not None
+    def test_decision_engine_import(self):
+        """Test that decision engine can be imported"""
+        from decision.decision import DecisionEngine, DEFAULT_WEIGHTS
 
-        orch.close()
-
-    def test_base_collector_tool_check(self, temp_db):
-        """Test tool existence check"""
-        from core.collectors import BaseCollector
-
-        collector = BaseCollector(temp_db)
-
-        # Check for common tools
-        assert collector.tool_exists('ls') == True
-        assert collector.tool_exists('nonexistent_tool_xyz') == False
+        engine = DecisionEngine()
+        assert engine is not None
+        assert isinstance(DEFAULT_WEIGHTS, dict)

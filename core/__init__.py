@@ -1,49 +1,18 @@
-"""SHADOW Core Module"""
+"""SHADOW Core Module - Database Layer Only
 
-from .collectors import (
-    CrawlCollector,
-    DNSCollector,
-    HTTPCollector,
-    NucleiCollector,
-    Orchestrator,
-    SubdomainCollector,
-)
+The scoring and orchestration logic has moved to:
+- decision/decision.py - Scoring and ranking
+- orchestrator.py - Module execution and state
+
+This module only contains database operations.
+"""
+
 from .db import Asset, Database, Endpoint, Finding, Service
-from .scorer import (
-    NOISE_PATTERNS,
-    PARAM_SCORES,
-    PATH_SCORES,
-    TECH_SCORES,
-    HeuristicRules,
-    Scorer,
-    ScoreResult,
-    apply_heuristics,
-    format_target,
-    get_action_suggestion,
-    get_priority,
-)
 
 __all__ = [
-    'Database',
-    'Asset',
-    'Service',
-    'Endpoint',
-    'Finding',
-    'Scorer',
-    'ScoreResult',
-    'get_priority',
-    'format_target',
-    'get_action_suggestion',
-    'apply_heuristics',
-    'HeuristicRules',
-    'PARAM_SCORES',
-    'PATH_SCORES',
-    'TECH_SCORES',
-    'NOISE_PATTERNS',
-    'Orchestrator',
-    'SubdomainCollector',
-    'DNSCollector',
-    'HTTPCollector',
-    'CrawlCollector',
-    'NucleiCollector'
+    "Database",
+    "Asset",
+    "Service",
+    "Endpoint",
+    "Finding",
 ]

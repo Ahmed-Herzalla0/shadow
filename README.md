@@ -59,39 +59,40 @@
 
 ## 🚀 Quick Start
 
-### Orchestrator (New in v3.0)
-
 ```bash
 # Install
 pip install -e .
 
 # XSS-focused recon (default scope)
-python orchestrator.py target.com --output outdir --scope xss
+./shadow hunt target.com
+
+# Full recon with all modules
+./shadow hunt target.com --scope full
 
 # Resume interrupted scan
-python orchestrator.py target.com --output outdir --resume
-
-# Run destructive modules (nuclei exploit templates)
-python orchestrator.py target.com --allow-destructive --confirm-legal
-
-# Debug mode with verbose logging
-python orchestrator.py target.com --debug
-```
-
-### Legacy CLI
-
-```bash
-# Full recon scan
-./shadow hunt example.com
+./shadow hunt target.com --resume
 
 # View top 20 targets (ranked by score)
-./shadow top example.com
+./shadow top target.com --limit 20
 
-# Export high-score URLs for Burp
-./shadow export example.com -s 5 > interesting.txt
+# Export high-score URLs for nuclei/dalfox
+./shadow export target.com --min-score 10 > interesting.txt
 
 # View statistics
-./shadow stats example.com
+./shadow stats target.com
+
+# Run destructive modules (nuclei with exploit templates)
+./shadow hunt target.com --allow-destructive --confirm-legal
+
+# Debug mode with verbose logging
+./shadow hunt target.com --debug
+```
+
+### Advanced: Direct Orchestrator
+
+```bash
+# Run orchestrator directly for more control
+python orchestrator.py target.com --output outdir --scope xss --debug
 ```
 
 ---

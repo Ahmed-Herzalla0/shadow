@@ -16,7 +16,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core.db import Database
-from core.scorer import Scorer
+from decision.decision import DecisionEngine
 
 
 @pytest.fixture
@@ -95,8 +95,8 @@ def populated_db(temp_db):
 
 @pytest.fixture
 def scorer():
-    """Create a Scorer instance"""
-    return Scorer()
+    """Create a DecisionEngine instance (replaces old Scorer)"""
+    return DecisionEngine()
 
 
 @pytest.fixture

@@ -48,50 +48,60 @@ DEFAULT_TIMEOUT = 300  # 5 minutes per module
 DEFAULT_RETRIES = 2
 BACKOFF_BASE = 5  # seconds
 
-# Module definitions with scope mapping
+# ─────────────────────────────────────────────────────────────────────────────
+# MODULE REGISTRY
+# Only modules with actual Python implementations are enabled.
+# Modules without "script" are stubs - they exist for planning but won't run.
+# ─────────────────────────────────────────────────────────────────────────────
+
 MODULES = {
+    # ═══════════════════════════════════════════════════════════════════════
+    # PHASE 1: Asset Discovery (Implemented)
+    # ═══════════════════════════════════════════════════════════════════════
     "subdomains": {
         "script": "modules/02_subdomains/collector.py",
         "timeout": 600,
         "scopes": ["xss", "full", "api", "js"],
         "destructive": False,
+        "description": "Subdomain enumeration via subfinder, assetfinder, amass",
+        "enabled": True,
     },
+    
+    # ═══════════════════════════════════════════════════════════════════════
+    # PHASE 2: Planned Modules (Not Yet Implemented)
+    # These are defined for architecture completeness but will be skipped.
+    # ═══════════════════════════════════════════════════════════════════════
     "dns": {
-        "script": "modules/03_dns.sh",
+        "script": None,  # Not implemented
         "timeout": 300,
         "scopes": ["xss", "full"],
         "destructive": False,
+        "description": "DNS resolution and record enumeration",
+        "enabled": False,
     },
     "http": {
-        "script": "modules/05_http.sh",
+        "script": None,  # Not implemented
         "timeout": 600,
         "scopes": ["xss", "full", "api", "js"],
         "destructive": False,
-    },
-    "content": {
-        "script": "modules/06_content.sh",
-        "timeout": 900,
-        "scopes": ["xss", "full", "js"],
-        "destructive": False,
-    },
-    "js": {
-        "script": "modules/07_js.sh",
-        "timeout": 600,
-        "scopes": ["xss", "js", "full"],
-        "destructive": False,
+        "description": "HTTP probing and technology detection",
+        "enabled": False,
     },
     "params": {
-        "script": "modules/08_params.sh",
+        "script": None,  # Not implemented
         "timeout": 600,
         "scopes": ["xss", "full"],
         "destructive": False,
+        "description": "Parameter discovery via crawling and wordlists",
+        "enabled": False,
     },
     "vuln_xss": {
-        "script": "modules/09_vuln.sh",
+        "script": None,  # Not implemented
         "timeout": 1800,
         "scopes": ["xss"],
-        "destructive": True,  # Uses nuclei with payloads
-        "templates": "xss",
+        "destructive": True,
+        "description": "XSS validation via nuclei/dalfox",
+        "enabled": False,
     },
 }
 
@@ -247,7 +257,40 @@ class ModuleRunner:
                 error_message=f"Unknown module: {module_name}",
             )
 
-        script_path = PROJECT_ROOT / module_config["script"]
+        # Check if module is enabled
+        if not module_config.get("enabled", True):
+            self.log.info(f"⊘ {module_name} is not yet implemented, skipping")
+            return ModuleExecution(
+                module_name=module_name,
+                success=True,  # Not a failure, just not implemented
+                exit_code=0,
+                duration_seconds=0,
+                error_message="Module not implemented",
+            )
+
+        # Check if script exists
+        script_rel = module_config.get("script")
+        if not script_rel:
+            self.log.info(f"⊘ {module_name} has no script defined, skipping")
+            return ModuleExecution(
+                module_name=module_name,
+                success=True,
+                exit_code=0,
+                duration_seconds=0,
+                error_message="No script defined",
+            )
+
+        script_path = PROJECT_ROOT / script_rel
+        if not script_path.exists():
+            self.log.warning(f"⚠ {module_name} script not found: {script_path}")
+            return ModuleExecution(
+                module_name=module_name,
+                success=False,
+                exit_code=-1,
+                duration_seconds=0,
+                error_message=f"Script not found: {script_path}",
+            )
+
         module_timeout = module_config.get("timeout", self.timeout)
         output_file = self.output_dir / "raw" / f"{module_name}.jsonl"
 
