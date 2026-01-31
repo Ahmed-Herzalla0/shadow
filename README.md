@@ -1,296 +1,235 @@
-# 🦇 SHADOW v6 - Intelligence-Driven Bug Bounty Engine
+# 🦇 SHADOW - SQLite-Powered Bug Bounty Recon
 
-<p align="center">
-  <img src="https://img.shields.io/badge/version-6.0.0-purple?style=for-the-badge" alt="Version">
-  <img src="https://img.shields.io/badge/python-3.8+-blue?style=for-the-badge&logo=python" alt="Python">
-  <img src="https://img.shields.io/badge/platform-linux-green?style=for-the-badge&logo=linux" alt="Platform">
-  <img src="https://img.shields.io/github/actions/workflow/status/user/shadow/ci.yml?style=for-the-badge" alt="CI">
-</p>
+```
+███████╗██╗  ██╗ █████╗ ██████╗  ██████╗ ██╗    ██╗
+██╔════╝██║  ██║██╔══██╗██╔══██╗██╔═══██╗██║    ██║
+███████╗███████║███████║██║  ██║██║   ██║██║ █╗ ██║
+╚════██║██╔══██║██╔══██║██║  ██║██║   ██║██║███╗██║
+███████║██║  ██║██║  ██║██████╔╝╚██████╔╝╚███╔███╔╝
+╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝  ╚═════╝  ╚══╝╚══╝
+```
 
-<p align="center">
-  <b>من "تشغيل أدوات" إلى "محرك قرارات"</b><br>
-  <i>No scanner without reason. Automation stops when human reasoning is better.</i>
-</p>
+**أداة Recon تخزن كل شي في SQLite. لا files منفصلة.**
 
 ---
 
-## 🚀 What's New in v6
+## 🎯 الفرق عن باقي الأدوات
 
-### ❌ Old Approach (v5)
-- تشغيل كل الأدوات blindly
-- 10,000 URLs بدون تحليل
-- أرقام scoring عشوائية
-- ضجيج كثير، قيمة قليلة
-
-### ✅ New Approach (v6)
-- **Decision Engine**: كل أداة تشتغل لسبب
-- **State Machine**: كل target عنده state يتطور
-- **Real Scoring**: كل نقطة لها سبب
-- **Attack Paths**: مسارات هجوم مقترحة
-- **Top 20 Output**: أهم 20 target مع شرح "ليش؟"
-- **JSON Schemas**: Normalized output for automation
-- **Scanner Discipline**: No heavy scans without evidence
-- **CI/Tests**: Unit tests + GitHub Actions
-
----
-
-## 🎯 Core Philosophy
-
-```
-Bash = Execution only (runs tools)
-Python = Decision making (when, what, why)
-```
-
-### Scanner Discipline
-
-| Condition | Tool | Why |
-|-----------|------|-----|
-| params reflect | dalfox | XSS likely |
-| db error | sqlmap (manual) | SQLi confirmed |
-| api detected | custom tests | Needs manual |
-| cors header | corsy | Quick win |
-| graphql | introspection | Full schema |
-
----
-
-## 📁 Structure
-
-```
-shadow/
-├── shadow.sh               # Entry point
-├── engine/                 # 🧠 Python Decision Engine
-│   ├── state.py           # Target state machine
-│   ├── scorer.py          # Intelligent scoring
-│   ├── decision.py        # Decision engine
-│   ├── context.py         # Execution context
-│   ├── js_intel.py        # JS intelligence
-│   ├── output.py          # Smart output generation
-│   ├── schemas.py         # JSON schemas for modules
-│   ├── runner.py          # Module execution
-│   └── main.py            # CLI interface
-├── modules/               # 🔧 Bash execution layer
-│   ├── 01_intel.sh        # ASN, WHOIS
-│   ├── 02_subdomains.sh   # Subdomain discovery
-│   ├── 03_dns.sh          # DNS resolution
-│   ├── 04_ports.sh        # Port scanning
-│   ├── 05_http.sh         # HTTP probing
-│   ├── 06_content.sh      # Directory bruteforce
-│   ├── 07_js.sh           # JS analysis
-│   ├── 08_params.sh       # URL/param discovery
-│   └── 09_vuln.sh         # Vulnerability scanning
-├── config/
-│   ├── tools.conf         # Tool conditions
-│   ├── rate.conf          # Rate limiting + noise detection
-│   └── scope.conf         # Scope management
-├── utils/
-│   ├── noise.sh           # 🛑 Auto-pause on rate limit
-│   ├── output_wrapper.sh  # JSON output generator
-│   ├── cleanup.sh         # File cleanup
-│   └── log.sh             # Logging
-├── tests/
-│   └── test_engine.py     # Unit tests
-└── output/                # 📊 Intelligence reports
-```
+| الأدوات العادية | SHADOW |
+|----------------|--------|
+| Files منفصلة | SQLite واحد |
+| ما في correlation | كل شي مربوط |
+| 10,000 URL | Top 20 مع score |
+| grep و awk | SQL queries |
 
 ---
 
 ## 🚀 Quick Start
 
 ```bash
-# Full scan with decision engine
-./shadow6.sh example.com
+# Scan كامل
+./shadow hunt example.com
 
-# Stealth mode (for sensitive targets)
-./shadow6.sh example.com --stealth
+# شوف أهم 20 target
+./shadow top example.com
 
-# With Burp proxy
-./shadow6.sh example.com --proxy
-
-# Generate intelligence report
-./shadow6.sh --report
-
-# List all targets
-./shadow6.sh --list
-
-# Show target state
-./shadow6.sh --state example.com
-
-# Show what decisions would be made
-./shadow6.sh --decisions example.com
+# Export للـ Burp
+./shadow export example.com -s 5 > interesting.txt
 ```
 
 ---
 
-## 🧠 State Machine
+## 📦 Database Structure
 
-Every target has a state that evolves:
-
-```json
-{
-  "domain": "example.com",
-  "phase": "analysis",
-  "score": 15,
-  "priority": "high",
-  
-  "auth": {
-    "has_login": true,
-    "has_jwt": true,
-    "has_oauth": false
-  },
-  
-  "api": {
-    "detected": true,
-    "type": "graphql",
-    "endpoints_count": 47
-  },
-  
-  "params": {
-    "total_count": 156,
-    "xss_candidates": 12,
-    "sqli_candidates": 3
-  },
-  
-  "vuln_hints": {
-    "admin_panel": true,
-    "git_exposed": false,
-    "cors_misconfigured": true
-  }
-}
 ```
+┌─────────┐    ┌──────────┐    ┌───────────┐    ┌──────────┐
+│ Assets  │───▶│ Services │───▶│ Endpoints │───▶│ Findings │
+│ (hosts) │    │ (ports)  │    │  (URLs)   │    │ (vulns)  │
+└─────────┘    └──────────┘    └───────────┘    └──────────┘
+```
+
+كل شي مربوط. Query واحد بيعطيك:
+- الـ domain
+- الـ technology
+- الـ endpoint
+- الـ vulnerability
 
 ---
 
 ## 📊 Scoring System
 
-Real scoring with reasons:
+كل endpoint عنده score بناءً على:
 
-| Factor | Points | Reason |
-|--------|--------|--------|
-| JWT Auth | +5 | Algorithm confusion, weak secrets |
-| GraphQL | +6 | Introspection, nested queries |
-| Admin Panel | +8 | High impact if bypassed |
-| .git exposed | +7 | Full source + history |
-| SSRF candidates | +6 | Cloud metadata access |
-| Cloudflare WAF | -3 | Blocks automated attacks |
+### Parameters (+points)
+| Parameter | Score | Why |
+|-----------|-------|-----|
+| `id`, `user_id` | +3-4 | IDOR candidate |
+| `url`, `redirect` | +3-4 | SSRF/Redirect |
+| `file`, `path` | +4-5 | LFI candidate |
+| `cmd`, `exec` | +5 | RCE candidate |
+| `search`, `query` | +2 | XSS candidate |
 
-### Thresholds
+### Paths (+points)
+| Pattern | Score | Why |
+|---------|-------|-----|
+| `/api/` | +3 | API endpoint |
+| `/admin` | +4 | Admin panel |
+| `/graphql` | +4 | GraphQL |
+| `/debug` | +5 | Debug endpoint |
+| `.git` | +5 | Source exposure |
 
-| Score | Priority | Action |
-|-------|----------|--------|
-| < 4 | Low | Quick automated scan |
-| 4-7 | Medium | Standard testing |
-| 7-10 | High | Dedicated manual time |
-| > 10 | Critical | DROP EVERYTHING |
+### Noise (-points)
+| Pattern | Score | Why |
+|---------|-------|-----|
+| `.js`, `.css` | -5 | Static file |
+| cloudfront | -4 | CDN |
+| 404 | -2 | Dead page |
 
 ---
 
-## 🧪 Testing
+## 🔧 Commands
 
-Run the test suite:
-
+### `hunt` - Full Recon
 ```bash
-# Install test dependencies
-pip install pytest pytest-cov
-
-# Run tests
-pytest tests/ -v
-
-# With coverage
-pytest tests/ -v --cov=engine
+./shadow hunt example.com
+./shadow hunt example.com --skip-nuclei  # بدون vuln scan
+./shadow hunt example.com -o custom_dir  # output مخصص
 ```
 
----
-
-## 📦 JSON Schemas
-
-Every module produces normalized JSON output for automation:
-
-```json
-{
-  "module": "05_http",
-  "target": "example.com",
-  "timestamp": "2024-01-15T10:30:00",
-  "success": true,
-  "data": {
-    "alive_count": 150,
-    "technologies_found": {"nginx": 50, "PHP": 30},
-    "waf_detected": "cloudflare",
-    "interesting_titles": ["admin.example.com"]
-  }
-}
-```
-
-This enables:
-- Piping outputs to other tools
-- Building custom dashboards
-- Tracking scan history
-- Integration with CI/CD
-
----
-
-## 🛑 Noise Detection
-
-Automatic pause when server blocks us:
-
+### `top` - Show Targets
 ```bash
-╔═══════════════════════════════════════════════════════════════╗
-║  🛑 NOISE DETECTED - AUTO PAUSE                               ║
-╠═══════════════════════════════════════════════════════════════╣
-║  Reason: Rate Limit (429)                                     ║
-║  Pausing for: 60 seconds...                                   ║
-║  Stats: 403s=2 | 429s=3 | Timeouts=0                         ║
-╚═══════════════════════════════════════════════════════════════╝
-  ⏳ Resuming in  45 seconds...
+./shadow top example.com          # Top 20
+./shadow top example.com -n 50    # Top 50
 ```
 
-Configure in `config/rate.conf`:
-```properties
-NOISE_PAUSE_TIME="60"
-NOISE_MAX_429="3"
-NOISE_MAX_403="10"
-```
-
----
-
-## 📊 Output
-
-Instead of 10,000 URLs, you get:
-
-### Top 20 Targets Report
-
-```
-═══════════════════════════════════════════════════════════════════
-#1 🔴 api.example.com
-   Score: 18 | Priority: CRITICAL
-───────────────────────────────────────────────────────────────────
-   📌 WHY INTERESTING:
-      • GraphQL API: Introspection enabled
-      • JWT Auth: Algorithm confusion possible
-      • 47 hidden endpoints in JS
-
-   ⚡ QUICK WINS:
-      🎯 GraphQL introspection enabled - Extract full schema
-      🔑 3 secrets in JS - Validate each
-
-   🎯 ATTACK PATHS:
-      → JWT Exploitation (30min - 1 hour)
-      → GraphQL Exploitation (1-2 hours)
-```
-
----
-
-## 🔧 Legacy Mode (v5)
-
-The old Bash-only mode still works:
-
+### `export` - Export URLs
 ```bash
-./shadow.sh -d example.com
+./shadow export example.com                    # All URLs
+./shadow export example.com -s 5              # Score ≥ 5
+./shadow export example.com -s 5 -f urls.txt  # To file
 ```
 
-But we recommend using v6 for intelligent scanning.
+### `stats` - Statistics
+```bash
+./shadow stats example.com
+```
+
+Output:
+```
+  Assets:              150
+  Services (alive):    89
+  Endpoints:           2,340
+  Interesting (≥5):    127
+
+  Findings:            23
+    Critical:          2
+    High:              7
+```
+
+### `query` - Custom SQL
+```bash
+# أعطيني endpoints فيها file parameter
+./shadow query example.com "
+SELECT a.domain, e.path, e.params 
+FROM endpoints e
+JOIN services s ON e.service_id = s.id
+JOIN assets a ON s.asset_id = a.id
+WHERE e.params LIKE '%file%'
+"
+
+# أعطيني PHP endpoints بـ score عالي
+./shadow query example.com "
+SELECT a.domain, e.path, e.interesting_score
+FROM endpoints e
+JOIN services s ON e.service_id = s.id
+JOIN assets a ON s.asset_id = a.id
+WHERE s.technology LIKE '%PHP%'
+  AND e.interesting_score >= 5
+ORDER BY e.interesting_score DESC
+"
+```
 
 ---
 
-## 📝 License
+## 🔌 Integration
 
-MIT License - Use responsibly for authorized testing only.
+### Burp Suite
+```bash
+./shadow export example.com -s 5 > urls.txt
+# Import urls.txt في Burp → Target → Site map
+```
+
+### Nuclei Manual
+```bash
+./shadow export example.com -s 7 | nuclei -severity high,critical
+```
+
+### Other Tools
+```bash
+# SQLi testing
+./shadow query example.com "
+SELECT s.protocol || '://' || a.domain || e.path as url
+FROM endpoints e
+JOIN services s ON e.service_id = s.id  
+JOIN assets a ON s.asset_id = a.id
+WHERE e.tags LIKE '%sqli%'
+" | sqlmap --batch
+
+# SSRF testing  
+./shadow query example.com "
+SELECT s.protocol || '://' || a.domain || e.path as url
+FROM endpoints e
+JOIN services s ON e.service_id = s.id
+JOIN assets a ON s.asset_id = a.id  
+WHERE e.tags LIKE '%ssrf%'
+" > ssrf_targets.txt
+```
+
+---
+
+## 📁 Project Structure
+
+```
+shadow/
+├── shadow              # CLI entry point
+├── core/
+│   ├── db.py          # SQLite database
+│   ├── scorer.py      # Scoring rules
+│   └── collectors.py  # Tool wrappers
+├── output/
+│   └── example.com/
+│       └── shadow.db  # كل شي هون
+└── wordlists/
+```
+
+---
+
+## 🔧 Requirements
+
+Tools (install with `./install_tools.sh`):
+- subfinder
+- assetfinder  
+- amass
+- dnsx
+- httpx
+- katana
+- nuclei
+
+Python 3.8+
+
+---
+
+## 💡 Philosophy
+
+```
+One Database. One Query. One Answer.
+```
+
+لا files منفصلة. لا grep. لا awk.
+كل شي في SQLite. كل شي مربوط.
+
+---
+
+## License
+
+MIT
