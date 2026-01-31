@@ -1,0 +1,162 @@
+{
+  "generated_at": "2026-01-31T10:30:00Z",
+  "count": 10,
+  "targets": [
+    {
+      "domain": "api.example.com",
+      "url": "https://api.example.com:443/admin/config?cmd=status&file=app.conf",
+      "score": 18,
+      "priority": "critical",
+      "title": "Admin Configuration Panel",
+      "technology": "PHP, Laravel, Nginx",
+      "params": {
+        "cmd": "status",
+        "file": "app.conf"
+      },
+      "tags": ["admin", "rce", "lfi", "config"],
+      "recommended_action": "rce-test",
+      "findings": [],
+      "finding_count": 0
+    },
+    {
+      "domain": "api.example.com",
+      "url": "https://api.example.com:443/api/v2/users?id=1&redirect=http://callback.example.com",
+      "score": 14,
+      "priority": "critical",
+      "title": "User API v2",
+      "technology": "PHP, Laravel",
+      "params": {
+        "id": "1",
+        "redirect": "http://callback.example.com"
+      },
+      "tags": ["api", "idor", "ssrf", "redirect"],
+      "recommended_action": "idor-test",
+      "findings": [],
+      "finding_count": 0
+    },
+    {
+      "domain": "staging.example.com",
+      "url": "https://staging.example.com:443/debug/console?exec=whoami",
+      "score": 13,
+      "priority": "critical",
+      "title": "Debug Console - Staging",
+      "technology": "Python, Flask",
+      "params": {
+        "exec": "whoami"
+      },
+      "tags": ["debug", "rce", "internal"],
+      "recommended_action": "rce-test",
+      "findings": [
+        "command-injection-nuclei"
+      ],
+      "finding_count": 1
+    },
+    {
+      "domain": "jenkins.example.com",
+      "url": "https://jenkins.example.com:443/script",
+      "score": 11,
+      "priority": "critical",
+      "title": "Jenkins Script Console",
+      "technology": "Jenkins, Java",
+      "params": {},
+      "tags": ["admin", "rce", "ci"],
+      "recommended_action": "exploit-verify",
+      "findings": [
+        "jenkins-groovy-rce"
+      ],
+      "finding_count": 1
+    },
+    {
+      "domain": "api.example.com",
+      "url": "https://api.example.com:443/graphql?query={users{id,email}}",
+      "score": 9,
+      "priority": "high",
+      "title": "GraphQL API",
+      "technology": "Node.js, Express, GraphQL",
+      "params": {
+        "query": "{users{id,email}}"
+      },
+      "tags": ["api", "graphql", "xss"],
+      "recommended_action": "graphql-introspection",
+      "findings": [],
+      "finding_count": 0
+    },
+    {
+      "domain": "portal.example.com",
+      "url": "https://portal.example.com:443/upload?filename=test.php",
+      "score": 8,
+      "priority": "high",
+      "title": "File Upload Portal",
+      "technology": "PHP, Apache",
+      "params": {
+        "filename": "test.php"
+      },
+      "tags": ["upload", "lfi"],
+      "recommended_action": "lfi-test",
+      "findings": [],
+      "finding_count": 0
+    },
+    {
+      "domain": "app.example.com",
+      "url": "https://app.example.com:443/oauth/callback?code=abc&state=xyz&redirect_uri=http://evil.com",
+      "score": 7,
+      "priority": "high",
+      "title": "OAuth Callback",
+      "technology": "Ruby, Rails",
+      "params": {
+        "code": "abc",
+        "state": "xyz",
+        "redirect_uri": "http://evil.com"
+      },
+      "tags": ["auth", "redirect", "ssrf"],
+      "recommended_action": "ssrf-test",
+      "findings": [],
+      "finding_count": 0
+    },
+    {
+      "domain": "api.example.com",
+      "url": "https://api.example.com:443/api/v1/orders?order_id=12345&sort=created_at",
+      "score": 6,
+      "priority": "medium",
+      "title": "Orders API",
+      "technology": "PHP, Laravel",
+      "params": {
+        "order_id": "12345",
+        "sort": "created_at"
+      },
+      "tags": ["api", "idor", "sqli"],
+      "recommended_action": "sqli-test",
+      "findings": [],
+      "finding_count": 0
+    },
+    {
+      "domain": "www.example.com",
+      "url": "https://www.example.com:443/search?q=test&category=all",
+      "score": 5,
+      "priority": "medium",
+      "title": "Search Results",
+      "technology": "PHP, WordPress",
+      "params": {
+        "q": "test",
+        "category": "all"
+      },
+      "tags": ["xss"],
+      "recommended_action": "xss-test",
+      "findings": [],
+      "finding_count": 0
+    },
+    {
+      "domain": "docs.example.com",
+      "url": "https://docs.example.com:443/api/docs/swagger.json",
+      "score": 4,
+      "priority": "medium",
+      "title": "Swagger Documentation",
+      "technology": "Node.js",
+      "params": {},
+      "tags": ["api", "exposure"],
+      "recommended_action": "api-fuzz",
+      "findings": [],
+      "finding_count": 0
+    }
+  ]
+}

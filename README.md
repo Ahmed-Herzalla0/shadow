@@ -1,4 +1,4 @@
-# 🦇 SHADOW - SQLite-Powered Bug Bounty Recon
+# 🦇 SHADOW v2.3 - SQLite-Powered Bug Bounty Recon
 
 ```
 ███████╗██╗  ██╗ █████╗ ██████╗  ██████╗ ██╗    ██╗
@@ -7,128 +7,206 @@
 ╚════██║██╔══██║██╔══██║██║  ██║██║   ██║██║███╗██║
 ███████║██║  ██║██║  ██║██████╔╝╚██████╔╝╚███╔███╔╝
 ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝  ╚═════╝  ╚══╝╚══╝
+       SQLite-Powered Bug Bounty Recon v2.3
 ```
 
-**أداة Recon تخزن كل شي في SQLite. لا files منفصلة.**
+**أداة Recon تخزن كل شي في SQLite. لا files منفصلة. Decision-ready outputs.**
+
+[![CI](https://github.com/Ahmed-Herzalla0/shadow/actions/workflows/ci.yml/badge.svg)](https://github.com/Ahmed-Herzalla0/shadow/actions/workflows/ci.yml)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ---
 
-## 🎯 الفرق عن باقي الأدوات
+## ⚠️ LEGAL & ETHICAL NOTICE
 
-| الأدوات العادية | SHADOW |
-|----------------|--------|
-| Files منفصلة | SQLite واحد |
-| ما في correlation | كل شي مربوط |
-| 10,000 URL | Top 20 مع score |
-| grep و awk | SQL queries |
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  AUTHORIZATION REQUIRED                                                      │
+│                                                                              │
+│  This tool is for AUTHORIZED security testing ONLY.                        │
+│                                                                              │
+│  Before running SHADOW, you MUST have:                                       │
+│  • Written authorization from the target owner                              │
+│  • A valid bug bounty program scope (if applicable)                         │
+│  • Understanding of applicable laws in your jurisdiction                    │
+│                                                                              │
+│  Unauthorized use of this tool may violate:                                 │
+│  • Computer Fraud and Abuse Act (CFAA) - USA                               │
+│  • Computer Misuse Act - UK                                                 │
+│  • Similar laws in other jurisdictions                                      │
+│                                                                              │
+│  THE AUTHORS ARE NOT RESPONSIBLE FOR MISUSE OF THIS TOOL.                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**You must agree to these terms before using this tool.**
+
+---
+
+## 🎯 What Makes SHADOW Different
+
+| Traditional Tools | SHADOW |
+|-------------------|--------|
+| Separate files everywhere | Single SQLite database |
+| No correlation between data | Everything linked with foreign keys |
+| 10,000+ URLs to grep through | Top 20 ranked by score |
+| Manual grep/awk/jq pipelines | SQL queries for anything |
+| Raw data dumps | Decision-ready JSON reports |
+| No prioritization | Automated action suggestions |
 
 ---
 
 ## 🚀 Quick Start
 
 ```bash
-# Scan كامل
+# Install dependencies
+pip install -e .
+./install_tools.sh  # Install external tools
+
+# Full recon scan
 ./shadow hunt example.com
 
-# شوف أهم 20 target
+# View top 20 targets (ranked by score)
 ./shadow top example.com
 
-# Export للـ Burp
+# Export high-score URLs for Burp
 ./shadow export example.com -s 5 > interesting.txt
+
+# View statistics
+./shadow stats example.com
 ```
 
 ---
 
-## 📦 Database Structure
+## 📦 Architecture
 
 ```
-┌─────────┐    ┌──────────┐    ┌───────────┐    ┌──────────┐
-│ Assets  │───▶│ Services │───▶│ Endpoints │───▶│ Findings │
-│ (hosts) │    │ (ports)  │    │  (URLs)   │    │ (vulns)  │
-└─────────┘    └──────────┘    └───────────┘    └──────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              SHADOW v2.3                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐                   │
+│  │  Collectors  │───▶│   Database   │───▶│   Reports    │                   │
+│  └──────────────┘    └──────────────┘    └──────────────┘                   │
+│         │                   │                   │                            │
+│         ▼                   ▼                   ▼                            │
+│  - subfinder          - SQLite              - targets_ranked.json           │
+│  - assetfinder        - Assets              - summary.json                  │
+│  - amass              - Services            - notes.md                      │
+│  - dnsx               - Endpoints           - targets.jsonl                 │
+│  - httpx              - Findings                                            │
+│  - katana                                                                    │
+│  - nuclei                                                                    │
+│                                                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                           Scoring Engine                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Parameters (+pts)  │  Paths (+pts)    │  Tech (+pts)   │  Noise (-pts)    │
+│  • id/user_id +3-4  │  • /api/ +3      │  • PHP +2      │  • .js/.css -5   │
+│  • url/redirect +4  │  • /admin +4     │  • Spring +3   │  • CDN -4        │
+│  • file/path +4-5   │  • /graphql +4   │  • Jenkins +4  │  • 404 -2        │
+│  • cmd/exec +5      │  • /debug +5     │  • GraphQL +3  │                  │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-كل شي مربوط. Query واحد بيعطيك:
-- الـ domain
-- الـ technology
-- الـ endpoint
-- الـ vulnerability
+### Database Schema
+
+```sql
+-- All data in one SQLite file
+Assets (hosts) → Services (ports) → Endpoints (URLs) → Findings (vulns)
+
+-- Example query: Find PHP endpoints with IDOR parameters
+SELECT a.domain, e.path, e.params, e.interesting_score
+FROM endpoints e
+JOIN services s ON e.service_id = s.id
+JOIN assets a ON s.asset_id = a.id
+WHERE s.technology LIKE '%PHP%'
+  AND e.params LIKE '%id%'
+ORDER BY e.interesting_score DESC;
+```
 
 ---
 
 ## 📊 Scoring System
 
-كل endpoint عنده score بناءً على:
+Every endpoint gets a score based on its characteristics. Higher score = more likely to be interesting.
 
 ### Parameters (+points)
+
 | Parameter | Score | Why |
 |-----------|-------|-----|
-| `id`, `user_id` | +3-4 | IDOR candidate |
-| `url`, `redirect` | +3-4 | SSRF/Redirect |
-| `file`, `path` | +4-5 | LFI candidate |
-| `cmd`, `exec` | +5 | RCE candidate |
-| `search`, `query` | +2 | XSS candidate |
+| `id`, `user_id`, `account_id` | +3-4 | IDOR candidate |
+| `url`, `redirect`, `callback` | +3-4 | SSRF/Open Redirect |
+| `file`, `filename`, `path` | +4-5 | LFI candidate |
+| `cmd`, `exec`, `command` | +5 | RCE candidate |
+| `search`, `query`, `q` | +2 | XSS candidate |
+| `sort`, `order`, `filter` | +3 | SQLi candidate |
 
 ### Paths (+points)
-| Pattern | Score | Why |
-|---------|-------|-----|
-| `/api/` | +3 | API endpoint |
-| `/admin` | +4 | Admin panel |
-| `/graphql` | +4 | GraphQL |
-| `/debug` | +5 | Debug endpoint |
-| `.git` | +5 | Source exposure |
 
-### Noise (-points)
 | Pattern | Score | Why |
 |---------|-------|-----|
-| `.js`, `.css` | -5 | Static file |
-| cloudfront | -4 | CDN |
-| 404 | -2 | Dead page |
+| `/api/`, `/v1/`, `/v2/` | +2-3 | API endpoint |
+| `/admin`, `/dashboard` | +3-4 | Admin panel |
+| `/graphql` | +4 | GraphQL endpoint |
+| `/debug`, `/console` | +5 | Debug exposure |
+| `.git`, `.env` | +5 | Source/config exposure |
+| `/actuator` | +5 | Spring Actuator |
+
+### Priority Levels
+
+| Score | Priority | Recommended Action |
+|-------|----------|-------------------|
+| ≥10 | 🔴 Critical | Immediate manual review |
+| 7-9 | 🟠 High | Prioritize for testing |
+| 4-6 | 🟡 Medium | Include in scan scope |
+| 1-3 | 🟢 Low | Monitor |
+| 0 | ⚫ Noise | Ignore |
 
 ---
 
 ## 🔧 Commands
 
 ### `hunt` - Full Recon
+
 ```bash
-./shadow hunt example.com
-./shadow hunt example.com --skip-nuclei  # بدون vuln scan
-./shadow hunt example.com -o custom_dir  # output مخصص
+./shadow hunt example.com                    # Full scan
+./shadow hunt example.com --skip-nuclei      # Skip vuln scanning
+./shadow hunt example.com -o custom_output   # Custom output dir
 ```
 
+**Output:**
+- `output/example.com/shadow.db` - SQLite database
+- `output/example.com/reports/targets_ranked.json` - Top targets
+- `output/example.com/reports/summary.json` - Scan summary
+- `output/example.com/reports/notes.md` - Human-readable notes
+
 ### `top` - Show Targets
+
 ```bash
-./shadow top example.com          # Top 20
-./shadow top example.com -n 50    # Top 50
+./shadow top example.com          # Top 20 targets
+./shadow top example.com -n 50    # Top 50 targets
 ```
 
 ### `export` - Export URLs
+
 ```bash
-./shadow export example.com                    # All URLs
-./shadow export example.com -s 5              # Score ≥ 5
-./shadow export example.com -s 5 -f urls.txt  # To file
+./shadow export example.com                  # All URLs
+./shadow export example.com -s 5             # Score ≥ 5
+./shadow export example.com -s 5 -f urls.txt # To file
 ```
 
 ### `stats` - Statistics
+
 ```bash
 ./shadow stats example.com
 ```
 
-Output:
-```
-  Assets:              150
-  Services (alive):    89
-  Endpoints:           2,340
-  Interesting (≥5):    127
-
-  Findings:            23
-    Critical:          2
-    High:              7
-```
-
 ### `query` - Custom SQL
+
 ```bash
-# أعطيني endpoints فيها file parameter
+# Find endpoints with file parameter
 ./shadow query example.com "
 SELECT a.domain, e.path, e.params 
 FROM endpoints e
@@ -136,53 +214,6 @@ JOIN services s ON e.service_id = s.id
 JOIN assets a ON s.asset_id = a.id
 WHERE e.params LIKE '%file%'
 "
-
-# أعطيني PHP endpoints بـ score عالي
-./shadow query example.com "
-SELECT a.domain, e.path, e.interesting_score
-FROM endpoints e
-JOIN services s ON e.service_id = s.id
-JOIN assets a ON s.asset_id = a.id
-WHERE s.technology LIKE '%PHP%'
-  AND e.interesting_score >= 5
-ORDER BY e.interesting_score DESC
-"
-```
-
----
-
-## 🔌 Integration
-
-### Burp Suite
-```bash
-./shadow export example.com -s 5 > urls.txt
-# Import urls.txt في Burp → Target → Site map
-```
-
-### Nuclei Manual
-```bash
-./shadow export example.com -s 7 | nuclei -severity high,critical
-```
-
-### Other Tools
-```bash
-# SQLi testing
-./shadow query example.com "
-SELECT s.protocol || '://' || a.domain || e.path as url
-FROM endpoints e
-JOIN services s ON e.service_id = s.id  
-JOIN assets a ON s.asset_id = a.id
-WHERE e.tags LIKE '%sqli%'
-" | sqlmap --batch
-
-# SSRF testing  
-./shadow query example.com "
-SELECT s.protocol || '://' || a.domain || e.path as url
-FROM endpoints e
-JOIN services s ON e.service_id = s.id
-JOIN assets a ON s.asset_id = a.id  
-WHERE e.tags LIKE '%ssrf%'
-" > ssrf_targets.txt
 ```
 
 ---
@@ -191,31 +222,94 @@ WHERE e.tags LIKE '%ssrf%'
 
 ```
 shadow/
-├── shadow              # CLI entry point
+├── shadow                  # CLI entry point (Python)
+├── pyproject.toml          # Python packaging
 ├── core/
-│   ├── db.py          # SQLite database
-│   ├── scorer.py      # Scoring rules
-│   └── collectors.py  # Tool wrappers
-├── output/
-│   └── example.com/
-│       └── shadow.db  # كل شي هون
+│   ├── db.py              # SQLite database layer
+│   ├── scorer.py          # Scoring rules & heuristics
+│   └── collectors.py      # Tool wrappers
+├── utils/
+│   ├── __init__.py        # Logging utilities
+│   ├── state.py           # State management & resume
+│   ├── security.py        # Input validation
+│   └── reports.py         # Report generation
+├── tests/
+│   ├── test_decision.py   # Scoring tests
+│   ├── test_db.py         # Database tests
+│   └── test_cli.py        # CLI tests
+├── .github/workflows/     # CI/CD
 └── wordlists/
 ```
 
 ---
 
-## 🔧 Requirements
+## 🔌 Integration
 
-Tools (install with `./install_tools.sh`):
-- subfinder
-- assetfinder  
-- amass
-- dnsx
-- httpx
-- katana
-- nuclei
+### Burp Suite
 
-Python 3.8+
+```bash
+./shadow export example.com -s 5 > urls.txt
+# Import urls.txt in Burp → Target → Site map
+```
+
+### Nuclei (Manual)
+
+```bash
+./shadow export example.com -s 7 | nuclei -severity high,critical
+```
+
+---
+
+## 🔧 Installation
+
+### Requirements
+
+- Python 3.8+
+- External tools: subfinder, assetfinder, amass, dnsx, httpx, katana, nuclei
+
+### Install
+
+```bash
+git clone https://github.com/Ahmed-Herzalla0/shadow.git
+cd shadow
+pip install -e .
+./install_tools.sh
+./shadow --help
+```
+
+### Development
+
+```bash
+pip install -e ".[dev]"
+pytest tests/ -v
+ruff check core/ tests/
+```
+
+---
+
+## 📋 Sample Output
+
+### `reports/targets_ranked.json`
+
+```json
+{
+  "generated_at": "2026-01-31T10:00:00",
+  "count": 50,
+  "targets": [
+    {
+      "domain": "api.example.com",
+      "url": "https://api.example.com/admin/users?id=1",
+      "score": 12,
+      "priority": "critical",
+      "technology": "PHP, Laravel",
+      "params": {"id": "1"},
+      "tags": ["admin", "idor", "api"],
+      "recommended_action": "idor-test",
+      "findings": []
+    }
+  ]
+}
+```
 
 ---
 
@@ -225,11 +319,19 @@ Python 3.8+
 One Database. One Query. One Answer.
 ```
 
-لا files منفصلة. لا grep. لا awk.
-كل شي في SQLite. كل شي مربوط.
+- **No files everywhere** - Everything in SQLite
+- **No grep/awk pipelines** - SQL queries for anything
+- **No raw dumps** - Decision-ready outputs
+- **No guessing** - Scored and prioritized targets
 
 ---
 
-## License
+## 📝 License
 
-MIT
+MIT License
+
+---
+
+## 🙏 Credits
+
+Built on: subfinder, assetfinder, amass, httpx, katana, nuclei
