@@ -4,6 +4,7 @@
   <img src="https://img.shields.io/badge/version-6.0.0-purple?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/python-3.8+-blue?style=for-the-badge&logo=python" alt="Python">
   <img src="https://img.shields.io/badge/platform-linux-green?style=for-the-badge&logo=linux" alt="Platform">
+  <img src="https://img.shields.io/github/actions/workflow/status/user/shadow/ci.yml?style=for-the-badge" alt="CI">
 </p>
 
 <p align="center">
@@ -27,6 +28,9 @@
 - **Real Scoring**: كل نقطة لها سبب
 - **Attack Paths**: مسارات هجوم مقترحة
 - **Top 20 Output**: أهم 20 target مع شرح "ليش؟"
+- **JSON Schemas**: Normalized output for automation
+- **Scanner Discipline**: No heavy scans without evidence
+- **CI/Tests**: Unit tests + GitHub Actions
 
 ---
 
@@ -53,7 +57,7 @@ Python = Decision making (when, what, why)
 
 ```
 shadow/
-├── shadow6.sh              # New entry point
+├── shadow.sh               # Entry point
 ├── engine/                 # 🧠 Python Decision Engine
 │   ├── state.py           # Target state machine
 │   ├── scorer.py          # Intelligent scoring
@@ -61,14 +65,30 @@ shadow/
 │   ├── context.py         # Execution context
 │   ├── js_intel.py        # JS intelligence
 │   ├── output.py          # Smart output generation
+│   ├── schemas.py         # JSON schemas for modules
+│   ├── runner.py          # Module execution
 │   └── main.py            # CLI interface
 ├── modules/               # 🔧 Bash execution layer
+│   ├── 01_intel.sh        # ASN, WHOIS
+│   ├── 02_subdomains.sh   # Subdomain discovery
+│   ├── 03_dns.sh          # DNS resolution
+│   ├── 04_ports.sh        # Port scanning
+│   ├── 05_http.sh         # HTTP probing
+│   ├── 06_content.sh      # Directory bruteforce
+│   ├── 07_js.sh           # JS analysis
+│   ├── 08_params.sh       # URL/param discovery
+│   └── 09_vuln.sh         # Vulnerability scanning
 ├── config/
 │   ├── tools.conf         # Tool conditions
 │   ├── rate.conf          # Rate limiting + noise detection
 │   └── scope.conf         # Scope management
 ├── utils/
-│   └── noise.sh           # 🛑 Auto-pause on rate limit
+│   ├── noise.sh           # 🛑 Auto-pause on rate limit
+│   ├── output_wrapper.sh  # JSON output generator
+│   ├── cleanup.sh         # File cleanup
+│   └── log.sh             # Logging
+├── tests/
+│   └── test_engine.py     # Unit tests
 └── output/                # 📊 Intelligence reports
 ```
 
@@ -161,6 +181,50 @@ Real scoring with reasons:
 | 4-7 | Medium | Standard testing |
 | 7-10 | High | Dedicated manual time |
 | > 10 | Critical | DROP EVERYTHING |
+
+---
+
+## 🧪 Testing
+
+Run the test suite:
+
+```bash
+# Install test dependencies
+pip install pytest pytest-cov
+
+# Run tests
+pytest tests/ -v
+
+# With coverage
+pytest tests/ -v --cov=engine
+```
+
+---
+
+## 📦 JSON Schemas
+
+Every module produces normalized JSON output for automation:
+
+```json
+{
+  "module": "05_http",
+  "target": "example.com",
+  "timestamp": "2024-01-15T10:30:00",
+  "success": true,
+  "data": {
+    "alive_count": 150,
+    "technologies_found": {"nginx": 50, "PHP": 30},
+    "waf_detected": "cloudflare",
+    "interesting_titles": ["admin.example.com"]
+  }
+}
+```
+
+This enables:
+- Piping outputs to other tools
+- Building custom dashboards
+- Tracking scan history
+- Integration with CI/CD
 
 ---
 

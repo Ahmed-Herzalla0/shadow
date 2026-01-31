@@ -12,14 +12,45 @@ from .state import TargetState, StateManager
 from .scorer import Scorer, Score
 from .decision import DecisionEngine, Decision
 from .context import Context, ContextBuilder
+from .schemas import (
+    ModuleOutput,
+    IntelOutput,
+    SubdomainsOutput,
+    DNSOutput,
+    HTTPOutput,
+    ContentOutput,
+    JSOutput,
+    ParamsOutput,
+    VulnOutput,
+    PipelineResult
+)
+from .runner import ModuleRunner, ModuleOrchestrator
 
 __all__ = [
+    # State
     'TargetState',
     'StateManager', 
+    # Scoring
     'Scorer',
     'Score',
+    # Decision
     'DecisionEngine',
     'Decision',
+    # Context
     'Context',
-    'ContextBuilder'
+    'ContextBuilder',
+    # Schemas
+    'ModuleOutput',
+    'IntelOutput',
+    'SubdomainsOutput',
+    'DNSOutput',
+    'HTTPOutput',
+    'ContentOutput',
+    'JSOutput',
+    'ParamsOutput',
+    'VulnOutput',
+    'PipelineResult',
+    # Runner
+    'ModuleRunner',
+    'ModuleOrchestrator'
 ]

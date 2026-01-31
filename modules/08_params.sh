@@ -244,5 +244,17 @@ run() {
     save_stat "total_urls" "$total_urls" "$base"
     save_stat "urls_with_params" "$(wc -l < "$base/params/urls_with_params.txt" 2>/dev/null)" "$base"
     
+    # ─────────────────────────────────────────────────────────────────────────
+    # Generate JSON Output
+    # ─────────────────────────────────────────────────────────────────────────
+    log_info "Generating JSON output..."
+    
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    if [[ -f "${script_dir}/utils/output_wrapper.sh" ]]; then
+        source "${script_dir}/utils/output_wrapper.sh"
+        generate_module_json "08_params" "$base" "$target" "$base/params/output.json"
+        log_success "JSON output: $base/params/output.json"
+    fi
+    
     return 0
 }

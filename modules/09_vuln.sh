@@ -352,6 +352,17 @@ run() {
     save_stat "vulns_nuclei" "$(wc -l < "$base/vulns/nuclei_all.txt" 2>/dev/null)" "$base"
     
     # ─────────────────────────────────────────────────────────────────────────
+    # Generate JSON Output
+    # ─────────────────────────────────────────────────────────────────────────
+    log_info "Generating JSON output..."
+    
+    if [[ -f "${SCRIPT_DIR}/utils/output_wrapper.sh" ]]; then
+        source "${SCRIPT_DIR}/utils/output_wrapper.sh"
+        generate_module_json "09_vuln" "$base" "$target" "$base/vulns/output.json"
+        log_success "JSON output: $base/vulns/output.json"
+    fi
+    
+    # ─────────────────────────────────────────────────────────────────────────
     # Cleanup unnecessary files from previous stages
     # ─────────────────────────────────────────────────────────────────────────
     if [[ "${AUTO_CLEANUP:-true}" == "true" ]]; then

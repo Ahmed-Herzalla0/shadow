@@ -198,5 +198,17 @@ run() {
     
     save_stat "http_alive" "$(wc -l < "$base/http/alive.txt" 2>/dev/null)" "$base"
     
+    # ─────────────────────────────────────────────────────────────────────────
+    # Generate JSON Output
+    # ─────────────────────────────────────────────────────────────────────────
+    log_info "Generating JSON output..."
+    
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    if [[ -f "${script_dir}/utils/output_wrapper.sh" ]]; then
+        source "${script_dir}/utils/output_wrapper.sh"
+        generate_module_json "05_http" "$base" "$target" "$base/http/output.json"
+        log_success "JSON output: $base/http/output.json"
+    fi
+    
     return 0
 }
